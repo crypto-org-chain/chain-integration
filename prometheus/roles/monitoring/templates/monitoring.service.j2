@@ -1,0 +1,19 @@
+[Unit]
+Description=Monitoring
+ConditionPathExists={{ base_path }}/prometheus
+ConditionPathExists={{ base_path }}/alertmanager
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User={{ create_user }}
+Group={{ create_user }}
+Type=simple
+ExecStart=/usr/local/bin/docker-compose -f {{ base_path }}/docker-compose.yml up
+ExecStop=/usr/local/bin/docker-compose -f {{ base_path }}/docker-compose.yml down
+
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

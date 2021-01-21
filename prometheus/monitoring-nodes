@@ -1,0 +1,12 @@
+monitoring_nodes:
+  hosts:
+    node01:
+      ansible_host: <HOST>
+  vars:
+    create_user: monitoring
+    webhook_url: <WEBHOOK_URL>
+    chain_main_nodes: [{"node":"<CHAIN_NODE_HOST>", "env":"<ENV>","name":"<NAME>"},{"node":"<CHAIN_NODE_HOST>", "env":"<ENV>","name":"<NAME>"}]
+    channel: <SLACK_CHANNEL>
+    alert_endpoint: testnet-alertmanager.<YOUR_DOMAIN>
+    prom_endpoint: testnet-prometheus.<YOUR_DOMAIN>
+    graf_endpoint: testnet-grafana.<YOUR_DOMAIN>

@@ -1,0 +1,67 @@
+global:
+  scrape_interval:     15s # By default, scrape targets every 15 seconds.
+
+  # Attach these labels to any time series or alerts when communicating with
+  # external systems (federation, remote storage, Alertmanager).
+  external_labels:
+    monitor: 'node-monitoring'
+
+rule_files:
+  - "*.rules"
+
+# A scrape configuration containing exactly one endpoint to scrape:
+# Here it's Prometheus itself.
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+  - job_name: 'prometheus'
+
+    # Override the global default and scrape targets from this job every 5 seconds.
+    scrape_interval: 5s
+
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'chain-nodes'
+    static_configs:
+{% for item in chain_nodes %}
+{% filter indent(6) %}
+      - targets: ['{{ item.node }}:26660']
+{% endfilter %}
+{% filter indent(8) %}
+        labels:
+{% endfilter %}
+{% filter indent(10) %}
+          instance: {{ item.name }}
+{% endfilter %}
+{% filter indent(10) %}
+          env: {{ item.env }}
+{% endfilter %}
+{% filter indent(10) %}
+          ip: {{ item.node }}
+{% endfilter %}
+{% endfor %}
+
+  - job_name: 'node'
+    static_configs:
+{% for item in chain_nodes %}
+{% filter indent(6) %}
+      - targets: ['{{ item.node }}:9100']
+{% endfilter %}
+{% filter indent(8) %}
+        labels:
+{% endfilter %}
+{% filter indent(10) %}
+          instance: {{ item.name }}
+{% endfilter %}
+{% filter indent(10) %}
+          env: {{ item.env }}
+{% endfilter %}
+{% filter indent(10) %}
+          ip: {{ item.node }}
+{% endfilter %}
+{% endfor %}
+
+alerting:
+  alertmanagers:
+    - static_configs:
+      - targets: ['localhost:9093']

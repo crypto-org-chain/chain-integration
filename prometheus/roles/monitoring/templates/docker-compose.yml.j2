@@ -1,0 +1,25 @@
+version: "3"
+
+services:
+    prometheus:
+        image: prom/prometheus
+        volumes:
+            - {{ base_path }}/prometheus:/etc/prometheus/
+            - {{ base_path }}/prometheus-data:/prometheus/data
+        command:
+            - '--config.file=/etc/prometheus/prometheus.yml'
+            - '--web.enable-lifecycle'
+        ports:
+            - '9090:9090'
+        user: "1003:1003"
+        network_mode: host
+    alertmanager:
+        image: prom/alertmanager
+        volumes:
+            - {{ base_path }}/alertmanager/alertmanager.yml:/alertmanager.yml
+        command:
+            - '--config.file=/alertmanager.yml'
+            - '--web.external-url=http://{{ ansible_host }}:9093'
+        ports:
+            - '9093:9093'
+        network_mode: host

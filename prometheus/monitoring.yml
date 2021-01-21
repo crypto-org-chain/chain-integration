@@ -1,0 +1,64 @@
+---
+- name: Run Monitoring Services
+  any_errors_fatal: true
+  hosts: monitoring_nodes
+  remote_user: ubuntu
+  become: yes
+  roles:
+    - role: grafana
+      vars:
+        grafana_security:
+          admin_user: admin
+          admin_password: "password"
+        grafana_dashboards:
+          - dashboard_id: '11074'
+            revision_id: '9'
+            datasource: 'Prometheus'
+            title: 'Node Exporter for Prometheus Dashboard EN v20201010' 
+          - dashboard_id: '3662'
+            revision_id: '2'
+            datasource: 'Prometheus'
+            title: 'Prometheus 2.0 Overview'
+          - dashboard_id: '11036'
+            revision_id: '1'
+            datasource: 'Prometheus'
+            title: 'Cosmos Dashboard'
+        grafana_datasources:
+          - name: "Prometheus"
+            type: "prometheus"
+            access: "proxy"
+            url: "http://localhost:9090"
+            isDefault: true
+            basicAuth: false
+        grafana_auth:
+          disable_login_form: true
+          anonymous:
+            enabled: true
+            org_role: Admin
+        grafana_provisioning_synced: true
+    - role: alertmanager
+    - role: prometheus
+    - role: nginx-revproxy
+      vars:
+        nginx_revproxy_sites:
+          alermanager:
+            domains:
+              - "{{ alert_endpoint }}"
+            upstreams:
+              - { backend_address: localhost, backend_port: 9093 }
+            ssl: false
+            letsencrypt: false
+          prometheus:
+            domains:
+              - "{{ prom_endpoint }}"
+            upstreams:
+              - { backend_address: localhost, backend_port: 9090 }
+            ssl: false
+            letsencrypt: false
+          grafana:
+            domains:
+              - "{{ graf_endpoint }}"
+            upstreams:
+              - { backend_address: localhost, backend_port: 3000 }
+            ssl: false
+            letsencrypt: false

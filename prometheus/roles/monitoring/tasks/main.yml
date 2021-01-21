@@ -1,0 +1,73 @@
+---
+- name: Create a new regular user without home and shell
+  user:
+    name: '{{ create_user }}'
+    state: present
+    groups: docker
+    create_home: false
+    shell: /bin/false
+    append: yes
+- name: Create directories for setup
+  file:
+    path: '{{ item }}'
+    state: directory
+    owner: '{{ create_user }}'
+    group: 'ubuntu'
+  with_items:
+    - '{{ base_path }}'
+    - '{{ base_path }}/prometheus'
+    - '{{ base_path }}/alertmanager'
+- name: Create prometheus config
+  template:
+    src: prometheus.yml.j2
+    dest: '{{ base_path }}/prometheus/prometheus.yml'
+    owner: '{{ create_user }}'
+    group: 'ubuntu'
+    mode: '644'
+- name: Copy alertmanager config to remote host
+  copy:
+    src: alertmanager.yml
+    dest: '{{ base_path }}/alertmanager/alertmanager.yml'
+    owner: '{{ create_user }}'
+    group: 'ubuntu'
+    mode: '644'
+- name: Replace alertmanager config with env
+  replace:
+    path: '{{ base_path }}/alertmanager/alertmanager.yml'
+    regexp: '{{ item.regexp1 }}'
+    replace: '{{ item.replace }}'
+  with_items:
+    - { regexp1: 'WEBHOOK_URL', replace: '{{ webhook_url }}' }
+    - { regexp1: 'ANSIBLE_HOST', replace: '{{ ansible_host }}' }
+- name: Copy rules config to remote host
+  copy:
+    src: chain.rules
+    dest: '{{ base_path }}/prometheus/chain.rules'
+    owner: '{{ create_user }}'
+    group: 'ubuntu'
+    mode: '644'
+- name: Configure docker compose yaml
+  template:
+    src: '{{ item }}.j2'
+    dest: '{{ base_path }}/{{ item }}'
+    owner: '{{ create_user }}'
+    group: 'ubuntu'
+  with_items:
+    - docker-compose.yml
+- name: Create monitoring service file
+  template:
+    src: monitoring.service.j2
+    dest: /lib/systemd/system/monitoring.service
+    mode: '644'
+  notify: Reload systemd
+- meta: flush_handlers
+- name: Enable service monitoring and ensure it is not masked
+  systemd:
+    name: monitoring
+    enabled: yes
+    masked: no
+- name: Start monitoring
+  systemd:
+    state: restarted
+    daemon_reload: yes
+    name: monitoring
