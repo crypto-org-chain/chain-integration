@@ -1,0 +1,16 @@
+/var/log/nginx/*.log
+{
+	rotate 4
+	weekly
+	missingok
+	notifempty
+	create 0644 syslog adm
+	dateext
+	dateformat -%Y%m%d-%s
+	compress
+	delaycompress
+	sharedscripts
+	postrotate
+		/usr/lib/rsyslog/rsyslog-rotate
+	endscript
+}

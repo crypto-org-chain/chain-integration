@@ -10,7 +10,7 @@ receivers:
       - send_resolved: true
         username: 'testnetalerting'
         icon_url: https://avatars3.githubusercontent.com/u/3380462
-        channel: '#chain-deployment'
+        channel: '#SLACK_CHANNEL'
         title: |-
           [{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .CommonLabels.alertname }} for {{ .CommonLabels.job }}
           {{- if gt (len .CommonLabels) (len .GroupLabels) -}}
@@ -37,5 +37,3 @@ receivers:
             {{ range .Labels.SortedPairs }} • *{{ .Name }}:* `{{ .Value }}`
             {{ end }}
           {{ end }}
-    webhook_configs:
-      - url: http://localhost:8080

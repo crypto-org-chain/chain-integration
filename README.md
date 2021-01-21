@@ -41,7 +41,7 @@ There are a few ways to access to the Crypto.com Chain
 - chain-indexing (indexing on-chain data): https://github.com/crypto-com/chain-indexing
 ## Node Monitoring (Prometheus)
 
-The Ansible playbook for deploying Prometheus and some of the rules we are using are under `prometheus`.
+The Ansible playbook for deploying Prometheus and some of the rules we are using are under `monitoring`.
 
 ## Croeseid Testnet Public Nodes
 

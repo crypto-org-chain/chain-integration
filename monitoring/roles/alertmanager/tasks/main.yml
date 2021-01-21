@@ -57,6 +57,7 @@
   with_items:
     - { regexp1: 'WEBHOOK_URL', replace: '{{ webhook_url }}' }
     - { regexp1: 'PROM_ENDPOINT', replace: '{{ prom_endpoint }}' }
+    - { regexp1: 'SLACK_CHANNEL', replace: '{{ channel }}' }
   notify: event_restart_alertmanager
 
 - name: Copy systemd init file
