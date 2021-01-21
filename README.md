@@ -29,8 +29,8 @@ There are a few ways to access to the Crypto.com Chain
 
 ## API Client (JavaScript)
 
-Cosmosjs (Stargate ready): https://github.com/cosmos/cosmjs/tree/master/packages/stargate
-chain-jslib: https://github.com/crypto-com/chain-jslib
+- chain-jslib: https://github.com/crypto-com/chain-jslib
+- Cosmosjs (Stargate ready): https://github.com/cosmos/cosmjs/tree/master/packages/stargate
 
 ## Node Monitoring (Prometheus)
 
@@ -38,8 +38,8 @@ The Ansible playbook for deploying Prometheus and some of the rules we are using
 
 ## Croeseid Testnet Public Nodes
 
-Tendermint: https://testnet-croeseid.crypto.com:26657/
-Cosmoe RESTful gRPC: https://testnet-croeseid.crypto.com:1317/
+- Tendermint: https://testnet-croeseid.crypto.com:26657/
+- Cosmos RESTful gRPC: https://testnet-croeseid.crypto.com:1317/
 
 ## Block Explorer
 
