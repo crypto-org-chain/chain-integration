@@ -68,6 +68,11 @@
     state: restarted
     enabled: yes
 
+- name: Wait for port 9090 to become open on the host, don't start checking for 10 seconds
+  wait_for:
+    port: 9090
+    delay: 10
+
 - name: Check if prometheus is accessible
   uri:
     url: http://localhost:9090

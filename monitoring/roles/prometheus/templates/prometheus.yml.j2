@@ -28,7 +28,7 @@ scrape_configs:
           instance: {{ item.name }}
 {% endfilter %}
 {% filter indent(10) %}
-          env: {{ item.env }}
+          chain_id: {{ item.chain_id }}
 {% endfilter %}
 {% filter indent(10) %}
           ip: {{ item.node }}
@@ -48,7 +48,7 @@ scrape_configs:
           instance: {{ item.name }}
 {% endfilter %}
 {% filter indent(10) %}
-          env: {{ item.env }}
+          chain_id: {{ item.chain_id }}
 {% endfilter %}
 {% filter indent(10) %}
           ip: {{ item.node }}

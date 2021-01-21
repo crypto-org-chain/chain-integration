@@ -19,10 +19,6 @@
             revision_id: '2'
             datasource: 'Prometheus'
             title: 'Prometheus 2.0 Overview'
-          - dashboard_id: '11036'
-            revision_id: '1'
-            datasource: 'Prometheus'
-            title: 'Cosmos Dashboard'
         grafana_datasources:
           - name: "Prometheus"
             type: "prometheus"

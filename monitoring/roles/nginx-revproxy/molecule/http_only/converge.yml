@@ -1,0 +1,39 @@
+---
+
+- name: Converge
+  hosts: all
+  become: true
+
+  vars:
+    nginx_revproxy_sites:
+      example.com:
+        domains:
+          - example.com
+          - www.example.com
+        upstreams:
+          - {backend_address: 192.168.0.100, backend_port: 80}
+          - {backend_address: 192.168.0.101, backend_port: 8080}
+        ssl: false
+        letsencrypt: false
+
+  pre_tasks:
+    - name: Install cron (RedHat).
+      yum:
+        name: cronie
+        state: present
+      when: ansible_os_family == 'RedHat'
+
+    - name: Install cron (Debian).
+      apt:
+        name: cron
+        state: present
+      when: ansible_distribution == 'Debian'
+
+    - name: Update apt cache.
+      apt:
+        update_cache: true
+        cache_valid_time: 600
+      when: ansible_distribution == 'Ubuntu'
+
+  roles:
+    - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') | basename }}"

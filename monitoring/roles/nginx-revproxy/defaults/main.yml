@@ -1,0 +1,22 @@
+---
+
+nginx_revproxy_sites:                                         # List of sites to reverse proxy
+  example.com:                                                # Domain name
+    client_max_body_size: "256M"
+    proxy_read_timeout: "360"
+    domains:                                                  # List of server_name aliases
+      - example.com
+      - www.example.com
+    upstreams:                                                # List of Upstreams
+      - {backend_address: 192.168.0.100, backend_port: 80}
+      - {backend_address: 192.168.0.101, backend_port: 8080}
+    ssl: true                                                 # Set to True if you want to redirect http to https
+    hsts_max_age: 63072000                                    # Set HSTS header with max-age defined
+    letsencrypt: false                                        # Set to True if you want use letsencrypt
+    letsencrypt_email: ""                                     # Set email for letencrypt cert
+
+nginx_revproxy_certbot_auto: true
+
+nginx_revproxy_certbot_packages:
+  - certbot
+  - python3-certbot-nginx
