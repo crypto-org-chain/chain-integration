@@ -48,8 +48,8 @@ The Ansible playbook for deploying Prometheus and some rules we are using are un
 
 ## Croeseid Testnet Public Nodes
 
-- Tendermint: https://testnet-croeseid.crypto.com:26657/
-- Cosmos RESTful gRPC: https://testnet-croeseid.crypto.com:1317/
+- Tendermint: https://testnet-croeseid.crypto.org:26657/
+- Cosmos RESTful gRPC: https://testnet-croeseid.crypto.org:1317/
 
 ## Block Explorer
 
