@@ -12,7 +12,8 @@
 
 ## Setup Guide
 
-https://chain.crypto.com/docs/getting-started/croeseid-testnet.html
+Testnet: https://chain.crypto.com/docs/getting-started/croeseid-testnet.html
+Mainnet: https://crypto.org/docs/getting-started/mainnet.html
 
 ## API Documentation
 
