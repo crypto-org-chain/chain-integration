@@ -16,10 +16,17 @@ This document describes the block and transaction structure of Crypto.org Chain 
   - [Assets and Amount](#assets-and-amount)
 - [Bank](#bank)
   - [MsgSend](#msg-send)
+  - [MsgMultiSend](#msg-multisend)
+- [Distribution](#distribution)
+  - [MsgSetWithdrawAddress](#msg-set-withdraw-address)
+  - [MsgWithdrawDelegatorReward](#msg-withdraw-delegator-reward)
+  - [MsgWithdrawValidatorCommission](#msg-withdraw-validator-commission)
+  - [MsgFundCommunityPool](#msg-fund-community-pool)
 
 ## Changelog
 
-2021-04-16 First Draft
+- 2021-04-16 First Draft
+- 2021-04-16 Add Distribution module
 
 ## Common APIs
 
@@ -145,11 +152,33 @@ Example
 
 Each object in the array has the same format as [Single Object](#asset-object).
 
+
+<a id="asset-string">
+
+#### 3. String
+
+This is commonly seen in events' attributes of block and transaction.
+
+At the time of writing there will only be a single entry in this array because `basecro` (or `basetcro` in Croeseid Testnet) is the only supported asset on Crypto.org Chain. However, after IBC transfer and other coins issuance methods are enabled, there will be more asset types.
+
+Example
+```json
+{
+    "key": "amount",
+    "value": "1234basecro,5678apple"
+}
+```
+
 ## Bank
 
 <a id="msg-send" />
 
 ### 1. MsgSend
+
+Simple transfer message
+
+- Funds movement: Yes
+
 
 #### Protobuf Structure
 
@@ -169,12 +198,18 @@ Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/
 
 | Detail | How | Type |
 | --- | --- | --- |
-| Transaction Type | `tx.body.messages[index]["@type"] === "/cosmos.bank.v1beta1.MsgSend"` | String |
-| From address | `tx.body.messages[index].from_address` | String |
-| To address | `tx.body.messages[index].to_address` | String |
-| Amount | `tx.body.messages[index].amount` | [Asset Array](#asset-array)
+| Transaction Type | `tx.body.messages[message_index]["@type"] === "/cosmos.bank.v1beta1.MsgSend"` | String |
+| From address | `tx.body.messages[message_index].from_address` | String |
+| To address | `tx.body.messages[message_index].to_address` | String |
+| Amount | `tx.body.messages[message_index].amount` | [Asset Array](#asset-array)
+
+<a id="msg-multisend" />
 
 ### 2. MsgMultiSend
+
+Multiple inputs, multiple outputs transfer message.
+
+- Funds movement: Yes
 
 #### Protobuf
 
@@ -202,8 +237,134 @@ Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/
 
 | Detail | How | Type |
 | --- | --- | --- |
-| Transaction Type | `tx.body.messages[index]["@type"] === "/cosmos.bank.v1beta1.MsgMultiSend"` | String |
-| From Addresses | `tx.body.messages[index].inputs[n].address` where `n>=1`. There can be multiple (`n`) from addresses. | String |
-| From Amounts | `tx.body.messages[index].inputs[n].coins` where `n>=1`. There can be multiple (`n`) from addresses and their corresponding input amount.  | [Asset Array](#asset-array)|
-| To Addresses | `tx.body.messages[index].outputs[n].address` where `n>=1`. There can be multiple (`n`) destination addresses. | String |
-| To Amounts | `tx.body.messages[index].outputs[n].coins` where `n>=1`. There can be multiple (`n`) destination addresses and their corresponding input amount.  | [Asset Array](#asset-array)
+| Transaction Type | `tx.body.messages[message_index]["@type"] === "/cosmos.bank.v1beta1.MsgMultiSend"` | String |
+| From Addresses | `tx.body.messages[message_index].inputs[m].address` where `m>=1`. There can be multiple (`m`) from addresses. | String |
+| From Amounts | `tx.body.messages[message_index].inputs[m].coins` where `m>=1`. There can be multiple (`m`) from addresses and their corresponding input amount.  | [Asset Array](#asset-array)|
+| To Addresses | `tx.body.messages[message_index].outputs[n].address` where `n>=1`. There can be multiple (`n`) destination addresses. | String |
+| To Amounts | `tx.body.messages[message_index].outputs[n].coins` where `n>=1`. There can be multiple (`n`) destination addresses and their corresponding input amount.  | [Asset Array](#asset-array)
+
+## Distribution
+
+<a id="msg-set-withdraw-address" />
+
+### 1. MsgSetWithdrawAddress
+
+Sets the withdraw address for a delegator (or validator self-delegation)
+
+- Funds movement: No (Pay for fee only)
+
+#### Protobuf
+
+```go
+type MsgSetWithdrawAddress struct {
+	DelegatorAddress string `protobuf:"bytes,1,opt,name=delegator_address,json=delegatorAddress,proto3" json:"delegator_address,omitempty" yaml:"delegator_address"`
+	WithdrawAddress  string `protobuf:"bytes,2,opt,name=withdraw_address,json=withdrawAddress,proto3" json:"withdraw_address,omitempty" yaml:"withdraw_address"`
+}
+```
+
+#### Example
+
+Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/txs/D4FCC8E1403677157D367A88A0832B9E411BDC4E029954FC133DB60296CF3DE3
+
+#### Details
+
+TODO
+
+<a id="msg-withdraw-delegator-reward">
+
+### 2. MsgWithdrawDelegatorReward
+
+Withdraw delegation rewards from a single validator
+
+Funds movement: Yes
+
+#### Protobuf
+
+```go
+type MsgWithdrawDelegatorReward struct {
+	DelegatorAddress string `protobuf:"bytes,1,opt,name=delegator_address,json=delegatorAddress,proto3" json:"delegator_address,omitempty" yaml:"delegator_address"`
+	ValidatorAddress string `protobuf:"bytes,2,opt,name=validator_address,json=validatorAddress,proto3" json:"validator_address,omitempty" yaml:"validator_address"`
+}
+```
+
+#### Example
+
+Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/txs/3B36AA1AC81ACD58E7A06C21353DB0FC40A70EDBF6BD2CD23D7BEDC7A0F56318
+
+#### Details
+
+| Detail | How | Type |
+| --- | --- | --- |
+| Transaction Type | `tx.body.messages[message_index]["@type"] === "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward"` | String |
+| Delegator | `tx.body.messages[message_index].delegator_address` | String |
+| Withdraw From Validator | `tx.body.messages[message_index].validator_address` | String |
+| Withdraw To Address | `tx_response.logs[message_index].events[event_index].attributes[attribute_index].value` <br />where <br />`tx_response.logs[message_index].events[event_index].type === "transfer" && tx_response.logs[message_index].events[event_index].attributes[attribute_index].key === "recipient"`.  | String |
+| Withdraw Reward Amount | `tx_response.logs[message_index].events[event_index].attributes[attribute_index].value` <br />where <br />`tx_response.logs[message_index].events[event_index].type === "transfer" && tx_response.logs[message_index].events[event_index].attributes[attribute_index].key === "amount"`.  | [Asset String](#asset-string)|
+
+<a id="msg-withdraw-validator-commission">
+
+### 3. MsgWithdrawValidatorCommission
+
+Withdraws the full commission of a validator to the validator creator (initial delegator) address.
+
+#### Protofbuf
+
+```json
+type MsgWithdrawValidatorCommission struct {
+	ValidatorAddress string `protobuf:"bytes,1,opt,name=validator_address,json=validatorAddress,proto3" json:"validator_address,omitempty" yaml:"validator_address"`
+}
+```
+
+#### Example
+
+- Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/txs/3739F76EF67A61D6F0163A5B177EA64ED80B67D9AEF8435C525913E69026D320
+- Message Index: `1`
+
+#### Details
+
+This transaction will trigger an internal transfer from the "Distribution" module account to the withdraw to address. Note that the "Distribution" module account is an internal account in Crypto.org Chain to hold the rewards, commissions and community pool funds before they are being distributed.
+
+Ths "Distribution" module account is different on different chain. In Crypto.org Chain Mainnet, it is [cro1jv65s3grqf6v6jl3dp4t6c9t9rk99cd8lyv94w](https://mainnet.crypto.org:1317/cosmos/auth/v1beta1/accounts/cro1jv65s3grqf6v6jl3dp4t6c9t9rk99cd8lyv94w).
+
+| Detail | How | Type |
+| --- | --- | --- |
+| Transaction Type | `tx.body.messages[message_index]["@type"] === "/cosmos.distribution.v1beta1.MsgWithdrawValidatorCommission"` | String |
+| Validator | `tx.body.messages[message_index].validator_address` | String |
+| Withdraw From Validator | `tx.body.messages[message_index].validator_address` | String |
+| Withdraw To Address | `tx_response.logs[message_index].events[event_index].attributes[attribute_index].value` <br />where <br />`tx_response.logs[message_index].events[event_index].type === "transfer" && tx_response.logs[message_index].events[event_index].attributes[attribute_index].key === "recipient"`.  | String |
+| Withdraw Commission Amount | `tx_response.logs[message_index].events[event_index].attributes[m].value` <br />where <br />`tx_response.logs[message_index].events[event_index].type === "transfer" && tx_response.logs[message_index].events[event_index].attributes[attribute_index].key === "amount"`.  | [Asset String](#asset-string)|
+
+
+<a id="msg-fund-community-pool">
+
+### 4. MsgFundCommunityPool
+
+Fund from an account to the community pool. The community pool can later be sent to another by submitting a MsgSubmitEcProposal
+
+- Funds movement: Yes
+
+#### Protobuf
+
+```go
+type MsgFundCommunityPool struct {
+	Amount    github_com_cosmos_cosmos_sdk_types.Coins `protobuf:"bytes,1,rep,name=amount,proto3,castrepeated=github.com/cosmos/cosmos-sdk/types.Coins" json:"amount"`
+	Depositor string                                   `protobuf:"bytes,2,opt,name=depositor,proto3" json:"depositor,omitempty"`
+}
+```
+
+#### Example
+
+https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/txs/7C1747E0189DCA88BBA55A1720809C8DF6075799C11ECBE4C4E1F89C91D4F55F
+
+#### Details
+
+This transaction will initiate a transfer from an account to the "Distribution" module account. Note that the "Distribution" module account is an internal account in Crypto.org Chain to hold the rewards, commissions and community pool funds before they are being distributed.
+
+Ths "Distribution" module account is different on different chain. In Crypto.org Chain Mainnet, it is [cro1jv65s3grqf6v6jl3dp4t6c9t9rk99cd8lyv94w](https://mainnet.crypto.org:1317/cosmos/auth/v1beta1/accounts/cro1jv65s3grqf6v6jl3dp4t6c9t9rk99cd8lyv94w).
+
+| Detail | How | Type |
+| --- | --- | --- |
+| Transaction Type | `tx.body.messages[message_index]["@type"] === "/cosmos.distribution.v1beta1.MsgFundCommunityPool"` | String |
+| Deposit From Account | `tx.body.messages[message_index].depositor` | String |
+| Deposit Amount | `tx.body.messages[message_index].amount` | [Asset Array](#asset-array) |
+| Delegate To Address ("Distribution" module account) | `tx_response.logs[message_index].events[event_index].attributes[attribute_index].value` <br />where <br />`tx_response.logs[message_index].events[event_index].type === "transfer" && tx_response.logs[message_index].events[event_index].attributes[attribute_index].key === "recipient"`.  | String |
