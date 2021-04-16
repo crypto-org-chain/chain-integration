@@ -9,6 +9,11 @@ This document describes the block and transaction structure of Crypto.org Chain 
 
 - [Changelog](#changelog)
 - [Common APIs](#common-apis)
+- [Common Block Details](#common-block-details)
+  - [Mint](#mint)
+  - [Block Rewards](#block-rewards)
+  - [Proposer Rewards](#proposer-rewards)
+  - [Commissions](#commission)
 - [Common Transaction Details](#common-transaction-details)
   - [Block Height](#block-height)
   - [Transaction Hash](#transaction-hash)
@@ -27,6 +32,7 @@ This document describes the block and transaction structure of Crypto.org Chain 
 
 - 2021-04-16 First Draft
 - 2021-04-16 Add Distribution module
+- 2021-04-16 Add Mint, Block Rewards, Proposer Rewards and Commissions
 
 ## Common APIs
 
@@ -71,6 +77,85 @@ Note:
 1. The API supports pagination, make sure you have iterate all the pages `pagination.offset=[offset starting from 0]&pagination.limit=[record per page]`
 2. The performance will degrade if you are searching for a result set that will grow over time. For example if 
 3. Multiple events in a single search is queried by `AND` condition. i.e If you do `tx.height` and `message.sender`. It will search for transactions happened on that block height AND signed by the sender.
+
+[Top](#table-of-content)
+
+## Common Block Details
+
+Most of the block events can be accessed using the [Tendermint Block Results API](#tendermint-block-results-api). One caveat of using this API is that all the events key-value attributes are bas64 encoded. So it is not human readable.
+
+A simple Node.js tool has been written to help parse and decode all key-value attributes in the block results API response. It can be downloaded at [https://github.com/calvinaco/cosmos-api-tools](https://github.com/calvinaco/cosmos-api-tools).
+
+Usage example:
+```bash
+$ git clone https://github.com/calvinaco/cosmos-api-tools
+$ cd cosmos-api-tools
+$ node block-results-decoder.js "https://mainnet.crypto.org:26657/block_results?height=10000"
+```
+
+Note that when you integrate with the API you should still base64 decode the attributes programmatically.
+
+<a id="mint" />
+
+### 1. Mint
+
+In every block, CRO is minted and offered as block rewards. The actual minted token is subject to inflation and is adjusted every block.
+
+Minted tokens are distributed as block and proposer rewards in the same block. However, since Cosmos SDK do lazy rewards calculation and collection, the minted tokens are first sent to "Distribution" module account and is later transferred to an account when a deleagtor withdraws the rewards or commissions by sending [MsgWithdrawDelegatorReward](#msg-withdraw-delegator-reward) or [MsgWithdrawValidatorCommission](#msg-withdraw-validator-commission).
+
+So [Block Rewards](#block-rewards), [Proposer Rewards](#proposer-rewards) and [Commissions](#commissions) events are for record keeping only and does not represent any actual token transfer between accounts.
+
+To get the mint token every block:
+
+| Accessor | Type |
+| --- | --- |
+| `Base64Decode(result.begin_block_events[event_index].attributes[attribute_index].value)`<br />where<br />`Base64Decode(result.begin_block_events[event_index].type) === "mint" && Base64Decode(result.begin_block_events[event_index].attributes[attribute_index].key) === "amount"` | [Asset String](#asset-string)
+
+<a id="block-rewards" />
+
+### 2. Block Rewards
+
+In every block, mint tokens and transaction fees are distributed to every active validator in the network. As a result, there will be multiple events, each corresponding to a validator and the rewards it receives.
+
+Block rewards are **not** credited to the delegator account directly. This event serve as record keeping purpose only. Each delegator account must explicitly send a [MsgWithdrawDelegatorReward](#msg-withdraw-delegator-reward) message transaction to collect the rewards.
+
+To get the reward **per validator**:
+
+| Detail | Accessor | Type |
+| --- | --- | -- |
+| Validator Address | `Base64Decode(result.begin_block_events[event_index].attributes[attribute_index].value)`<br />where<br />`Base64Decode(result.begin_block_events[event_index].type) === "rewards" && Base64Decode(result.begin_block_events[event_index].attributes[attribute_index].key) === "validator"` | [Asset String](#asset-string)
+| Reward Amount | `Base64Decode(result.begin_block_events[event_index].attributes[attribute_index].value)`<br />where<br />`Base64Decode(result.begin_block_events[event_index].type) === "rewards" && Base64Decode(result.begin_block_events[event_index].attributes[attribute_index].key) === "amount"` | String |
+
+<a id="proposer-rewards" />
+
+### 3. Proposer Rewards
+
+Block proposer can get extra bonus rewards.
+
+Similar to block rewards, proposer rewards are **not** credited to the account directly. This event serve as record keeping purpose only. Each validator creator account must explicitly send a [MsgWithdrawDelegatorReward](#msg-withdraw-delegator-reward) message transaction to collect the rewards.
+
+| Detail | Accessor | Type |
+| --- | --- | -- |
+| Validator Address | `Base64Decode(result.begin_block_events[event_index].attributes[attribute_index].value)`<br />where<br />`Base64Decode(result.begin_block_events[event_index].type) === "proposer_reward" && Base64Decode(result.begin_block_events[event_index].attributes[attribute_index].key) === "validator"` | [Asset String](#asset-string)
+| Reward Amount | `Base64Decode(result.begin_block_events[event_index].attributes[attribute_index].value)`<br />where<br />`Base64Decode(result.begin_block_events[event_index].type) === "proposer_reward" && Base64Decode(result.begin_block_events[event_index].attributes[attribute_index].key) === "amount"` | String |
+
+<a id="commissions" />
+
+### 4. Commissions
+
+Validator can charge commission to the block rewards received by delegators. Commissions is already included in [Block Rewards](#block-rewards) and [Proposer Rewards](#proposer-rewards).
+
+Similar to block rewards, commission rewards are **not** credited to the account directly. This event serve as record keeping purpose only. Each validator creator account must explicitly send a [MsgWithdrawValidatorCommission](#msg-withdraw-validator-commission) message transaction to collect the rewards.
+
+To get the commission received by **each validator**:
+
+| Detail | Accessor | Type |
+| --- | --- | -- |
+| Validator Address | `Base64Decode(result.begin_block_events[event_index].attributes[attribute_index].value)`<br />where<br />`Base64Decode(result.begin_block_events[event_index].type) === "rewards" && Base64Decode(result.begin_block_events[event_index].attributes[attribute_index].key) === "validator"` | [Asset String](#asset-string)
+| Commission Amount | `Base64Decode(result.begin_block_events[event_index].attributes[attribute_index].value)`<br />where<br />`Base64Decode(result.begin_block_events[event_index].type) === "rewards" && Base64Decode(result.begin_block_events[event_index].attributes[attribute_index].key) === "amount"` | String |
+
+[Top](#table-of-content)
+
 
 ## Common Transaction Details
 
@@ -169,6 +254,8 @@ Example
 }
 ```
 
+[Top](#table-of-content)
+
 ## Bank
 
 <a id="msg-send" />
@@ -196,7 +283,7 @@ Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/
 
 #### Details
 
-| Detail | How | Type |
+| Detail | Accessor | Type |
 | --- | --- | --- |
 | Transaction Type | `tx.body.messages[message_index]["@type"] === "/cosmos.bank.v1beta1.MsgSend"` | String |
 | From address | `tx.body.messages[message_index].from_address` | String |
@@ -235,7 +322,7 @@ Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/
 
 #### Details
 
-| Detail | How | Type |
+| Detail | Accessor | Type |
 | --- | --- | --- |
 | Transaction Type | `tx.body.messages[message_index]["@type"] === "/cosmos.bank.v1beta1.MsgMultiSend"` | String |
 | From Addresses | `tx.body.messages[message_index].inputs[m].address` where `m>=1`. There can be multiple (`m`) from addresses. | String |
@@ -293,7 +380,7 @@ Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/
 
 #### Details
 
-| Detail | How | Type |
+| Detail | Accessor | Type |
 | --- | --- | --- |
 | Transaction Type | `tx.body.messages[message_index]["@type"] === "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward"` | String |
 | Delegator | `tx.body.messages[message_index].delegator_address` | String |
@@ -326,7 +413,7 @@ This transaction will trigger an internal transfer from the "Distribution" modul
 
 Ths "Distribution" module account is different on different chain. In Crypto.org Chain Mainnet, it is [cro1jv65s3grqf6v6jl3dp4t6c9t9rk99cd8lyv94w](https://mainnet.crypto.org:1317/cosmos/auth/v1beta1/accounts/cro1jv65s3grqf6v6jl3dp4t6c9t9rk99cd8lyv94w).
 
-| Detail | How | Type |
+| Detail | Accessor | Type |
 | --- | --- | --- |
 | Transaction Type | `tx.body.messages[message_index]["@type"] === "/cosmos.distribution.v1beta1.MsgWithdrawValidatorCommission"` | String |
 | Validator | `tx.body.messages[message_index].validator_address` | String |
@@ -362,9 +449,11 @@ This transaction will initiate a transfer from an account to the "Distribution" 
 
 Ths "Distribution" module account is different on different chain. In Crypto.org Chain Mainnet, it is [cro1jv65s3grqf6v6jl3dp4t6c9t9rk99cd8lyv94w](https://mainnet.crypto.org:1317/cosmos/auth/v1beta1/accounts/cro1jv65s3grqf6v6jl3dp4t6c9t9rk99cd8lyv94w).
 
-| Detail | How | Type |
+| Detail | Accessor | Type |
 | --- | --- | --- |
 | Transaction Type | `tx.body.messages[message_index]["@type"] === "/cosmos.distribution.v1beta1.MsgFundCommunityPool"` | String |
 | Deposit From Account | `tx.body.messages[message_index].depositor` | String |
 | Deposit Amount | `tx.body.messages[message_index].amount` | [Asset Array](#asset-array) |
 | Delegate To Address ("Distribution" module account) | `tx_response.logs[message_index].events[event_index].attributes[attribute_index].value` <br />where <br />`tx_response.logs[message_index].events[event_index].type === "transfer" && tx_response.logs[message_index].events[event_index].attributes[attribute_index].key === "recipient"`.  | String |
+
+[Top](#table-of-content)
