@@ -169,7 +169,41 @@ Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/
 
 | Detail | How | Type |
 | --- | --- | --- |
-| Transaction Type | [Cosmos Transaction Query API](#cosmos-transaction-query-api) `tx.body.messages[index]["@type"] === "/cosmos.bank.v1beta1.MsgSend"` | String |
-| From address | [Cosmos Transaction Query API](#cosmos-transaction-query-api) `tx.body.messages[index].from_address` | String |
-| To address | [Cosmos Transaction Query API](#cosmos-transaction-query-api) `tx.body.messages[index].to_address` | String |
-| Amount | [Cosmos Transaction Query API](#cosmos-transaction-query-api) `tx.body.messages[index].amount` | [Asset Array](#asset-array)
+| Transaction Type | `tx.body.messages[index]["@type"] === "/cosmos.bank.v1beta1.MsgSend"` | String |
+| From address | `tx.body.messages[index].from_address` | String |
+| To address | `tx.body.messages[index].to_address` | String |
+| Amount | `tx.body.messages[index].amount` | [Asset Array](#asset-array)
+
+### 2. MsgMultiSend
+
+#### Protobuf
+
+```go
+type MsgMultiSend struct {
+	Inputs  []Input  `protobuf:"bytes,1,rep,name=inputs,proto3" json:"inputs"`
+	Outputs []Output `protobuf:"bytes,2,rep,name=outputs,proto3" json:"outputs"`
+}
+type Input struct {
+	Address string                                   `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
+	Coins   github_com_cosmos_cosmos_sdk_types.Coins `protobuf:"bytes,2,rep,name=coins,proto3,castrepeated=github.com/cosmos/cosmos-sdk/types.Coins" json:"coins"`
+}
+type Output struct {
+	Address string                                   `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
+	Coins   github_com_cosmos_cosmos_sdk_types.Coins `protobuf:"bytes,2,rep,name=coins,proto3,castrepeated=github.com/cosmos/cosmos-sdk/types.Coins" json:"coins"`
+}
+```
+
+#### Example 
+
+Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/txs/6CD89C9F32A4F4E918B2BCD722A9429693E3372E3F882BA4A460F2588A2EE0B3
+
+
+#### Details
+
+| Detail | How | Type |
+| --- | --- | --- |
+| Transaction Type | `tx.body.messages[index]["@type"] === "/cosmos.bank.v1beta1.MsgMultiSend"` | String |
+| From Addresses | `tx.body.messages[index].inputs[n].address` where `n>=1`. There can be multiple (`n`) from addresses. | String |
+| From Amounts | `tx.body.messages[index].inputs[n].coins` where `n>=1`. There can be multiple (`n`) from addresses and their corresponding input amount.  | [Asset Array](#asset-array)|
+| To Addresses | `tx.body.messages[index].outputs[n].address` where `n>=1`. There can be multiple (`n`) destination addresses. | String |
+| To Amounts | `tx.body.messages[index].outputs[n].coins` where `n>=1`. There can be multiple (`n`) destination addresses and their corresponding input amount.  | [Asset Array](#asset-array)
