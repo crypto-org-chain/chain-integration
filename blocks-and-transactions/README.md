@@ -2,8 +2,8 @@
 
 This document describes the block and transaction structure of Crypto.org Chain and explain different ways to extract and parse the details of them.
 
-- Based on Crypto.org Chain [v1.2.1](https://github.com/crypto-org-chain/chain-main/releases/tag/v1.2.1) release.
-- Last updated at: 2021-04-16
+- Based on Crypto.org Chain [v1.2.1](https://github.com/crypto-org-chain/chain-main/releases/tag/v1.2.1) release. 
+- Last updated at: 2021-04-20
 
 ## Table of Content
 
@@ -33,6 +33,8 @@ This document describes the block and transaction structure of Crypto.org Chain 
   - [MsgDelegate](#msg-delegate)
   - [MsgBeginRedelegate](#msg-begin-redelegate)
   - [MsgUndelegate](#msg-undelegate)
+- [Slashing](#slashing)
+  - [MsgUnjail](#msg-unjail)
 
 ## Changelog
 
@@ -716,5 +718,33 @@ Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/
 | Auto Withdraw Rewards Amount # | `tx_response.logs[message_index].events` <br />where <br />`tx_response.logs[message_index].events[event_index].type === "transfer" && tx_response.logs[message_index].events[event_index].attributes[attribute_index].key === "amount"`.  | String |
 
 \# Note: Similar to MsgBeginRedelegate, there may be multiple auto rewards withdrawal happen. In such a case the `transfer` event will have the multiple `{"recipient":"","sender":"","amount":""}`. An example is
+
+[Top](#table-of-content)
+
+## Slashing
+
+<a id="msg-unjail">
+
+### 1. MsgUnjail
+
+Unjail a validator
+
+Funds movement: No
+
+#### Protobuf
+
+```go
+type MsgUnjail struct {
+	ValidatorAddr string `protobuf:"bytes,1,opt,name=validator_addr,json=validatorAddr,proto3" json:"address" yaml:"address"`
+}
+```
+
+#### Example
+
+Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/txs/58BF8EBD17FF9500F395E4A9B2AE93EF21306E5706B3EC31CE116654D78B8684
+
+#### Details
+
+TODO
 
 [Top](#table-of-content)
