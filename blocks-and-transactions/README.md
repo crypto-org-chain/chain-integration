@@ -27,12 +27,19 @@ This document describes the block and transaction structure of Crypto.org Chain 
   - [MsgWithdrawDelegatorReward](#msg-withdraw-delegator-reward)
   - [MsgWithdrawValidatorCommission](#msg-withdraw-validator-commission)
   - [MsgFundCommunityPool](#msg-fund-community-pool)
+- [Staking](#stkaing)
+  - [MsgCreateValidator](#msg-create-validator)
+  - [MsgEditValidator](#msg-edit-validator)
+  - [MsgDelegate](#msg-delegate)
+  - [MsgBeginRedelegate](#msg-begin-redelegate)
+  - [MsgUndelegate](#msg-undelegate)
 
 ## Changelog
 
 - 2021-04-16 First Draft
 - 2021-04-16 Add Distribution module
 - 2021-04-16 Add Mint, Block Rewards, Proposer Rewards and Commissions
+- 2021-04-20 Add Staking
 
 ## Common APIs
 
@@ -456,5 +463,258 @@ Ths "Distribution" module account is different on different chain. In Crypto.org
 | Deposit From Account                                | `tx.body.messages[message_index].depositor`                                                                                                                                                                                                                                                 | String                      |
 | Deposit Amount                                      | `tx.body.messages[message_index].amount`                                                                                                                                                                                                                                                    | [Asset Array](#asset-array) |
 | Delegate To Address ("Distribution" module account) | `tx_response.logs[message_index].events[event_index].attributes[attribute_index].value` <br />where <br />`tx_response.logs[message_index].events[event_index].type === "transfer" && tx_response.logs[message_index].events[event_index].attributes[attribute_index].key === "recipient"`. | String                      |
+
+[Top](#table-of-content)
+
+## Staking
+
+<a id="msg-create-validator">
+
+### 1. MsgCreateValidator
+
+Create a new validator
+
+Funds movement: Yes
+
+#### Protobuf
+
+```go
+type MsgCreateValidator struct {
+	Description       Description                            `protobuf:"bytes,1,opt,name=description,proto3" json:"description"`
+	Commission        CommissionRates                        `protobuf:"bytes,2,opt,name=commission,proto3" json:"commission"`
+	MinSelfDelegation github_com_cosmos_cosmos_sdk_types.Int `protobuf:"bytes,3,opt,name=min_self_delegation,json=minSelfDelegation,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Int" json:"min_self_delegation" yaml:"min_self_delegation"`
+	DelegatorAddress  string                                 `protobuf:"bytes,4,opt,name=delegator_address,json=delegatorAddress,proto3" json:"delegator_address,omitempty" yaml:"delegator_address"`
+	ValidatorAddress  string                                 `protobuf:"bytes,5,opt,name=validator_address,json=validatorAddress,proto3" json:"validator_address,omitempty" yaml:"validator_address"`
+	Pubkey            *types.Any                             `protobuf:"bytes,6,opt,name=pubkey,proto3" json:"pubkey,omitempty"`
+	Value             types1.Coin                            `protobuf:"bytes,7,opt,name=value,proto3" json:"value"`
+}
+
+type Description struct {
+	// moniker defines a human-readable name for the validator.
+	Moniker string `protobuf:"bytes,1,opt,name=moniker,proto3" json:"moniker,omitempty"`
+	// identity defines an optional identity signature (ex. UPort or Keybase).
+	Identity string `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
+	// website defines an optional website link.
+	Website string `protobuf:"bytes,3,opt,name=website,proto3" json:"website,omitempty"`
+	// security_contact defines an optional email for security contact.
+	SecurityContact string `protobuf:"bytes,4,opt,name=security_contact,json=securityContact,proto3" json:"security_contact,omitempty" yaml:"security_contact"`
+	// details define other optional details.
+	Details string `protobuf:"bytes,5,opt,name=details,proto3" json:"details,omitempty"`
+}
+
+type CommissionRates struct {
+	// rate is the commission rate charged to delegators, as a fraction.
+	Rate github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,1,opt,name=rate,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"rate"`
+	// max_rate defines the maximum commission rate which validator can ever charge, as a fraction.
+	MaxRate github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,2,opt,name=max_rate,json=maxRate,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"max_rate" yaml:"max_rate"`
+	// max_change_rate defines the maximum daily increase of the validator commission, as a fraction.
+	MaxChangeRate github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,3,opt,name=max_change_rate,json=maxChangeRate,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"max_change_rate" yaml:"max_change_rate"`
+}
+```
+
+#### Example
+
+Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/txs/7B3C19A3674C9EF856C43FFF50B021085AC4DA693AA47F82882FFAC78F21DE05
+
+#### Details
+
+| Detail | Accessor | Type |
+| --- | --- | --- |
+| Transaction Type | `tx.body.messages[message_index]["@type"] === "/cosmos.staking.v1beta1.MsgCreateValidator"` | String |
+| Initial Delegator Address (Validator Creator) | `tx.body.messages[message_index].delegator_address` | String |
+| Delegated Amount | `tx.body.messages[message_index].value | [Asset Object](#asset-object) |
+
+[Top](#table-of-content)
+
+<a id="msg-edit-validator">
+
+### 2. MsgEditValidator
+
+Edit and existing validator
+
+Funds Movement: No
+
+#### Protobuf
+
+```go
+type MsgEditValidator struct {
+	Description      Description `protobuf:"bytes,1,opt,name=description,proto3" json:"description"`
+	ValidatorAddress string      `protobuf:"bytes,2,opt,name=validator_address,json=validatorAddress,proto3" json:"validator_address,omitempty" yaml:"address"`
+	// We pass a reference to the new commission rate and min self delegation as
+	// it's not mandatory to update. If not updated, the deserialized rate will be
+	// zero with no way to distinguish if an update was intended.
+	// REF: #2373
+	CommissionRate    *github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,3,opt,name=commission_rate,json=commissionRate,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"commission_rate,omitempty" yaml:"commission_rate"`
+	MinSelfDelegation *github_com_cosmos_cosmos_sdk_types.Int `protobuf:"bytes,4,opt,name=min_self_delegation,json=minSelfDelegation,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Int" json:"min_self_delegation,omitempty" yaml:"min_self_delegation"`
+}
+
+type Description struct {
+	// moniker defines a human-readable name for the validator.
+	Moniker string `protobuf:"bytes,1,opt,name=moniker,proto3" json:"moniker,omitempty"`
+	// identity defines an optional identity signature (ex. UPort or Keybase).
+	Identity string `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
+	// website defines an optional website link.
+	Website string `protobuf:"bytes,3,opt,name=website,proto3" json:"website,omitempty"`
+	// security_contact defines an optional email for security contact.
+	SecurityContact string `protobuf:"bytes,4,opt,name=security_contact,json=securityContact,proto3" json:"security_contact,omitempty" yaml:"security_contact"`
+	// details define other optional details.
+	Details string `protobuf:"bytes,5,opt,name=details,proto3" json:"details,omitempty"`
+}
+```
+
+#### Example
+
+Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/txs/F4A1D7757AD20979D540C0CD29DD335D17E121F15AA447990B87E0EE94531BD7
+
+#### Details
+
+TODO
+
+[Top](#table-of-content)
+
+
+<a id="msg-delegate">
+
+### 3. MsgDelegate
+
+Perform a delegation of coins from a delegator to a validator
+
+Funds movement: Yes
+
+#### Protobuf
+
+```go
+type MsgDelegate struct {
+	DelegatorAddress string      `protobuf:"bytes,1,opt,name=delegator_address,json=delegatorAddress,proto3" json:"delegator_address,omitempty" yaml:"delegator_address"`
+	ValidatorAddress string      `protobuf:"bytes,2,opt,name=validator_address,json=validatorAddress,proto3" json:"validator_address,omitempty" yaml:"validator_address"`
+	Amount           types1.Coin `protobuf:"bytes,3,opt,name=amount,proto3" json:"amount"`
+}
+```
+
+#### Example
+
+Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/txs/CCB45B0C6EC18A327ADFC8C36478A163D8C2A8BD9EB13687F73ED3D4559318A3
+
+#### Details
+
+| Detail | Accessor | Type |
+| --- | --- | --- |
+| Transaction Type | `tx.body.messages[message_index]["@type"] === "/cosmos.staking.v1beta1.MsgDelegate"` | String |
+| Delegate From Address | `tx.body.messages[message_index].delegator_address` | String |
+| Delegate To Validator | `tx.body.messages[message_index].validator_address` | String |
+| Delegate Amount | `tx.body.messages[message_index].amount` | [Asset Object](#asset-object) |
+
+[Top](#table-of-content)
+
+<a id="msg-begin-redelegate">
+
+### 4. MsgBeginRedelegate
+
+Perform a redelegation of coins from a delegator and source validator to a destination validator.
+
+Note that the redelegation is just a record update of the internal state of a delegator' staked funds. The delegator account won't have any funds movement based on the redelegation except.
+
+There is a side effect of `MsgBeginRedelegate`, upon successful execution of this message, all the rewards of the delegator from previous (source) validator will be withdrew automatically to the delegator account.
+
+Funds movement: Yes
+
+#### Protobuf
+
+```go
+type MsgBeginRedelegate struct {
+	DelegatorAddress    string      `protobuf:"bytes,1,opt,name=delegator_address,json=delegatorAddress,proto3" json:"delegator_address,omitempty" yaml:"delegator_address"`
+	ValidatorSrcAddress string      `protobuf:"bytes,2,opt,name=validator_src_address,json=validatorSrcAddress,proto3" json:"validator_src_address,omitempty" yaml:"validator_src_address"`
+	ValidatorDstAddress string      `protobuf:"bytes,3,opt,name=validator_dst_address,json=validatorDstAddress,proto3" json:"validator_dst_address,omitempty" yaml:"validator_dst_address"`
+	Amount              types1.Coin `protobuf:"bytes,4,opt,name=amount,proto3" json:"amount"`
+}
+```
+
+#### Example
+
+Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/txs/5D43A55463C8FB30A89306C26C5E3318826AD075D36E9B5E72F7019C00F14549
+
+#### Details
+
+| Detail | Accessor | Type |
+| --- | --- | --- |
+| Transaction Type | `tx.body.messages[message_index]["@type"] === "/cosmos.staking.v1beta1.MsgBeginRedelegate"` | String |
+| Redelegate From Address | `tx.body.messages[message_index].delegator_address` | String |
+| Redelegate From Validator | `tx.body.messages[message_index].validator_src_address` | String |
+| Redelegate To Validator | `tx.body.messages[message_index].validator_dst_address` | String |
+| Redelegate Amount | `tx.body.messages[message_index].amount` | [Asset Object](#asset-object) |
+| Auto Withdraw Rewards To Address # | `tx_response.logs[message_index].events` <br />where <br />`tx_response.logs[message_index].events[event_index].type === "transfer" && tx_response.logs[message_index].events[event_index].attributes[attribute_index].key === "recipient"`.  | String |
+| Auto Withdraw Rewards From Address (Always the "distribution" module account) # | `tx_response.logs[message_index].events` <br />where <br />`tx_response.logs[message_index].events[event_index].type === "transfer" && tx_response.logs[message_index].events[event_index].attributes[attribute_index].key === "sender"`.  | String |
+| Auto Withdraw Rewards Amount # | `tx_response.logs[message_index].events` <br />where <br />`tx_response.logs[message_index].events[event_index].type === "transfer" && tx_response.logs[message_index].events[event_index].attributes[attribute_index].key === "amount"`.  | String |
+
+\# Note: there may be multiple auto rewards withdrawal happen. In such a case the `transfer` event will have the multiple `{"recipient":"","sender":"","amount":""}`. An example is
+```
+{
+  "type": "transfer",
+  "attributes": [
+    {
+      "key": "recipient",
+      "value": "cro1hr6wx9mm6ycjr4x2p4ek4c9fl2prkxsx79y5qu"
+    },
+    {
+      "key": "sender",
+      "value": "cro1jv65s3grqf6v6jl3dp4t6c9t9rk99cd8lyv94w"
+    },
+    {
+      "key": "amount",
+      "value": "30763basecro"
+    },
+    {
+      "key": "recipient",
+      "value": "cro1hr6wx9mm6ycjr4x2p4ek4c9fl2prkxsx79y5qu"
+    },
+    {
+      "key": "sender",
+      "value": "cro1jv65s3grqf6v6jl3dp4t6c9t9rk99cd8lyv94w"
+    },
+    {
+      "key": "amount",
+      "value": "6881basecro"
+    }
+  ]
+}
+```
+
+[Top](#table-of-content)
+
+<a id="msg-undelegate">
+
+### 5. MsgUndelegate
+
+Perform an undelegation from a delegate and a validator.
+
+Funds movement: Yes
+
+#### Protobuf
+
+```go
+type MsgUndelegate struct {
+	DelegatorAddress string      `protobuf:"bytes,1,opt,name=delegator_address,json=delegatorAddress,proto3" json:"delegator_address,omitempty" yaml:"delegator_address"`
+	ValidatorAddress string      `protobuf:"bytes,2,opt,name=validator_address,json=validatorAddress,proto3" json:"validator_address,omitempty" yaml:"validator_address"`
+	Amount           types1.Coin `protobuf:"bytes,3,opt,name=amount,proto3" json:"amount"`
+}
+```
+
+#### Example
+
+Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/txs/3B36AA1AC81ACD58E7A06C21353DB0FC40A70EDBF6BD2CD23D7BEDC7A0F56318
+
+#### Details
+
+| Detail | Accessor | Type |
+| --- | --- | --- |
+| Transaction Type | `tx.body.messages[message_index]["@type"] === "/cosmos.distribution.v1beta1.MsgFundCommunityPool"` | String |
+| Undelegate From Address | `tx.body.messages[message_index].delegator_address` | String |
+| Undelegate From Validator | `tx.body.messages[message_index].validator_src_address` | String |
+| Undeleate Amount | `tx.body.messages[message_index].amount` | [Asset Object](#asset-object) |
+| Auto Withdraw Rewards To Address # | `tx_response.logs[message_index].events` <br />where <br />`tx_response.logs[message_index].events[event_index].type === "transfer" && tx_response.logs[message_index].events[event_index].attributes[attribute_index].key === "recipient"`.  | String |
+| Auto Withdraw Rewards From Address (Always the "distribution" module account) # | `tx_response.logs[message_index].events` <br />where <br />`tx_response.logs[message_index].events[event_index].type === "transfer" && tx_response.logs[message_index].events[event_index].attributes[attribute_index].key === "sender"`.  | String |
+| Auto Withdraw Rewards Amount # | `tx_response.logs[message_index].events` <br />where <br />`tx_response.logs[message_index].events[event_index].type === "transfer" && tx_response.logs[message_index].events[event_index].attributes[attribute_index].key === "amount"`.  | String |
+
+\# Note: Similar to MsgBeginRedelegate, there may be multiple auto rewards withdrawal happen. In such a case the `transfer` event will have the multiple `{"recipient":"","sender":"","amount":""}`. An example is
 
 [Top](#table-of-content)
