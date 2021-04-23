@@ -20,16 +20,16 @@
 There are a few ways to access to the Crypto.org Chain
 
 - Tendermint RPC
-    - Raw but most-completed data
-    - Hosted documentation (use the latest master only): https://docs.tendermint.com/master/rpc/
-    - Swagger file: https://github.com/tendermint/tendermint/blob/v0.34.3/rpc/openapi/openapi.yaml
+  - Raw but most-completed data
+  - Hosted documentation (use the latest master only): https://docs.tendermint.com/master/rpc/
+  - Swagger file: https://github.com/tendermint/tendermint/blob/v0.34.3/rpc/openapi/openapi.yaml
 - gRPC Based
-    - Processed chain information. Old state maybe pruned from time-to-time. To avoid state pruning, update `pruning = "nothing"` in `app.toml`
-    - There are two query methods based on gRPC:
-        1. [gRPC Server](./grpc/README.md)
-        2. [gRPC Proxy RESTful Server](./grpc-proxy-rest/README.md)
-            - [Swagger UI](https://cosmos.network/rpc)
-            - [Swagger file](./grpc-proxy-rest/swagger.yml)
+  - Processed chain information. Old state maybe pruned from time-to-time. To avoid state pruning, update `pruning = "nothing"` in `app.toml`
+  - There are two query methods based on gRPC:
+    1. [gRPC Server](./grpc/README.md)
+    2. [gRPC Proxy RESTful Server](./grpc-proxy-rest/README.md)
+       - [Swagger UI](https://cosmos.network/rpc)
+       - [Swagger file](./grpc-proxy-rest/swagger.yml)
 
 ## API Clients
 
@@ -46,14 +46,27 @@ There are a few ways to access to the Crypto.org Chain
 
 The Ansible playbook for deploying Prometheus and some rules we are using are under `monitoring`.
 
-## Croeseid Testnet Public Nodes
+## Public Nodes
+
+### Mainnet - `crypto-org-chain-mainnet-1`
+
+- Tendermint: https://mainnet.crypto.org:26657/
+- Cosmos RESTful gRPC: https://mainnet.crypto.org:1317/
+
+### Croeseid Testnet - `testnet-croeseid-2`
 
 - Tendermint: https://testnet-croeseid.crypto.org:26657/
 - Cosmos RESTful gRPC: https://testnet-croeseid.crypto.org:1317/
 
 ## Block Explorer
 
+### Mainnet
+
 https://crypto.org/explorer
+
+### Croeseid Testnet
+
+https://crypto.org/explorer/croeseid/
 
 ## Community
 
