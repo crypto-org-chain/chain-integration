@@ -3,51 +3,63 @@
 This document describes the block and transaction structure of Crypto.org Chain and explain different ways to extract and parse the details of them.
 
 - Based on Crypto.org Chain [v1.2.1](https://github.com/crypto-org-chain/chain-main/releases/tag/v1.2.1) release. 
-- Last updated at: 2021-04-20
+- Last updated at: 2021-04-23
 
 ## Table of Content
-
-- [Changelog](#changelog)
-- [Common APIs](#common-apis)
-- [Common Block Details](#common-block-details)
-  - [Mint](#mint)
-  - [Block Rewards](#block-rewards)
-  - [Proposer Rewards](#proposer-rewards)
-  - [Commissions](#commission)
-- [Common Transaction Details](#common-transaction-details)
-  - [Block Height](#block-height)
-  - [Transaction Hash](#transaction-hash)
-  - [Transaction Fee](#transaction-fee)
-  - [Assets and Amount](#assets-and-amount)
-- [Bank](#bank)
-  - [MsgSend](#msg-send)
-  - [MsgMultiSend](#msg-multisend)
-- [Distribution](#distribution)
-  - [MsgSetWithdrawAddress](#msg-set-withdraw-address)
-  - [MsgWithdrawDelegatorReward](#msg-withdraw-delegator-reward)
-  - [MsgWithdrawValidatorCommission](#msg-withdraw-validator-commission)
-  - [MsgFundCommunityPool](#msg-fund-community-pool)
-- [Staking](#stkaing)
-  - [MsgCreateValidator](#msg-create-validator)
-  - [MsgEditValidator](#msg-edit-validator)
-  - [MsgDelegate](#msg-delegate)
-  - [MsgBeginRedelegate](#msg-begin-redelegate)
-  - [MsgUndelegate](#msg-undelegate)
-- [Slashing](#slashing)
-  - [MsgUnjail](#msg-unjail)
-
+- [Crypto.org Chain Blocks and Transactions](#cryptoorg-chain-blocks-and-transactions)
+	- [Table of Content](#table-of-content)
+	- [Changelog](#changelog)
+	- [Common APIs](#common-apis)
+		- [1. Tendermint Block API](#1-tendermint-block-api)
+		- [2. Tendermint Block Results API](#2-tendermint-block-results-api)
+		- [3. Cosmos Transaction Query API](#3-cosmos-transaction-query-api)
+		- [4. Cosmos Transaction Search API](#4-cosmos-transaction-search-api)
+	- [Common Block Details](#common-block-details)
+		- [1. Mint](#1-mint)
+		- [2. Block Rewards](#2-block-rewards)
+		- [3. Proposer Rewards](#3-proposer-rewards)
+		- [4. Commissions](#4-commissions)
+	- [Common Transaction Details](#common-transaction-details)
+		- [1. Block Height](#1-block-height)
+		- [2. Transaction Hash](#2-transaction-hash)
+		- [3. Transaction Fee](#3-transaction-fee)
+		- [4. Assets and Amount](#4-assets-and-amount)
+			- [1. Single object](#1-single-object)
+			- [2. Array](#2-array)
+			- [3. String](#3-string)
+	- [Bank](#bank)
+		- [1. MsgSend](#1-msgsend)
+		- [2. MsgMultiSend](#2-msgmultisend)
+	- [Distribution](#distribution)
+		- [1. MsgSetWithdrawAddress](#1-msgsetwithdrawaddress)
+		- [2. MsgWithdrawDelegatorReward](#2-msgwithdrawdelegatorreward)
+		- [3. MsgWithdrawValidatorCommission](#3-msgwithdrawvalidatorcommission)
+		- [4. MsgFundCommunityPool](#4-msgfundcommunitypool)
+	- [Staking](#staking)
+		- [1. MsgCreateValidator](#1-msgcreatevalidator)
+		- [2. MsgEditValidator](#2-msgeditvalidator)
+		- [3. MsgDelegate](#3-msgdelegate)
+		- [4. MsgBeginRedelegate](#4-msgbeginredelegate)
+		- [5. MsgUndelegate](#5-msgundelegate)
+	- [Slashing](#slashing)
+		- [1. MsgUnjail](#1-msgunjail)
+		- [2. Being Jailed and Slashed](#2-being-jailed-and-slashed)
+			- [Liveness](#liveness)
+			- [Double Sign](#double-sign)
+			- [Limitations](#limitations)
 ## Changelog
 
 - 2021-04-16 First Draft
 - 2021-04-16 Add Distribution module
 - 2021-04-16 Add Mint, Block Rewards, Proposer Rewards and Commissions
 - 2021-04-20 Add Staking
+- 2021-04-23 Add details of jailing and slashing
 
 ## Common APIs
 
 <a id="tendermint-block-api">
 
-#### 1. Tendermint Block API
+### 1. Tendermint Block API
 
 - URL: https://mainnet.crypto.org:26657/block?height=[height]
 - This API returns block details, list of transaction bytes and consensus commits.
@@ -55,7 +67,7 @@ This document describes the block and transaction structure of Crypto.org Chain 
 
 <a id="tendermint-block-results-api">
 
-#### 2. Tendermint Block Results API
+### 2. Tendermint Block Results API
 
 - URL: https://mainnet.crypto.org:26657/block_results?height=[height]
 - This API returns the events of the block. These events include the outcomes from transactions, and block changes such as block rewards minted (`"mint"`) and distributed as well as consensus state updates such as validator missing block counts (`"liveness"`)
@@ -63,7 +75,7 @@ This document describes the block and transaction structure of Crypto.org Chain 
 
 <a id="cosmos-transaction-query-api">
 
-#### 3. Cosmos Transaction Query API
+### 3. Cosmos Transaction Query API
 
 - https://mainnet.crypto.org:1317/comsos/tx/v1beta1/txs/[hash]
 - This API returns the parsed transaction details and events of a particular transaction hash
@@ -71,7 +83,7 @@ This document describes the block and transaction structure of Crypto.org Chain 
 
 <a id="cosmos-transaction-search-api">
 
-#### 4. Cosmos Transaction Search API
+### 4. Cosmos Transaction Search API
 
 - URL: https://mainnet.crypto.org:1317/comsos/tx/v1beta1/txs
 - This API support event based query and returns parsed transactions. Common events includes
@@ -93,6 +105,8 @@ This document describes the block and transaction structure of Crypto.org Chain 
 ## Common Block Details
 
 Most of the block events can be accessed using the [Tendermint Block Results API](#tendermint-block-results-api). One caveat of using this API is that all the events key-value attributes are bas64 encoded. So it is not human readable.
+
+<a id="cosmos-api-tools" />
 
 A simple Node.js tool has been written to help parse and decode all key-value attributes in the block results API response. It can be downloaded at [https://github.com/calvinaco/cosmos-api-tools](https://github.com/calvinaco/cosmos-api-tools).
 
@@ -221,6 +235,7 @@ where `denom` is the asset type and `amount` is the amount and `basecro` is the 
 
 Note that the `amount` is always in string for precision accuracy. Please make sure your language is capable to handle big integer number.It is highly recommended to use library similar to [bignumber.js](https://mikemcl.github.io/bignumber.js/) in your language to handle the `amount`.
 
+<!-- omit in toc -->
 ##### Total supply:
 
 The total supply of CRO is _30 billion_ (`30,000,000,000`). `1 CRO=1_0000_0000 basecro`. So in basic unit `basecro` it can be up to `3,000,000,000,000,000,000`.
@@ -279,6 +294,7 @@ Simple transfer message
 
 - Funds movement: Yes
 
+<!-- omit in toc -->
 #### Protobuf Structure
 
 ```go
@@ -289,10 +305,12 @@ type MsgSend struct {
 }
 ```
 
+<!-- omit in toc -->
 #### Example
 
 Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/txs/0C5E617B0577B047D78EBF5313B8B70DF69E9535E17B964303BD04947B11B660
 
+<!-- omit in toc -->
 #### Details
 
 | Detail           | Accessor                                                                      | Type                        |
@@ -310,6 +328,7 @@ Multiple inputs, multiple outputs transfer message.
 
 - Funds movement: Yes
 
+<!-- omit in toc -->
 #### Protobuf
 
 ```go
@@ -327,10 +346,12 @@ type Output struct {
 }
 ```
 
+<!-- omit in toc -->
 #### Example
 
 Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/txs/6CD89C9F32A4F4E918B2BCD722A9429693E3372E3F882BA4A460F2588A2EE0B3
 
+<!-- omit in toc -->
 #### Details
 
 | Detail           | Accessor                                                                                                                                                 | Type                        |
@@ -351,6 +372,7 @@ Sets the withdraw address for a delegator (or validator self-delegation)
 
 - Funds movement: No (Pay for fee only)
 
+<!-- omit in toc -->
 #### Protobuf
 
 ```go
@@ -360,10 +382,12 @@ type MsgSetWithdrawAddress struct {
 }
 ```
 
+<!-- omit in toc -->
 #### Example
 
 Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/txs/D4FCC8E1403677157D367A88A0832B9E411BDC4E029954FC133DB60296CF3DE3
 
+<!-- omit in toc -->
 #### Details
 
 TODO
@@ -376,6 +400,7 @@ Withdraw delegation rewards from a single validator
 
 Funds movement: Yes
 
+<!-- omit in toc -->
 #### Protobuf
 
 ```go
@@ -385,10 +410,12 @@ type MsgWithdrawDelegatorReward struct {
 }
 ```
 
+<!-- omit in toc -->
 #### Example
 
 Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/txs/3B36AA1AC81ACD58E7A06C21353DB0FC40A70EDBF6BD2CD23D7BEDC7A0F56318
 
+<!-- omit in toc -->
 #### Details
 
 | Detail                  | Accessor                                                                                                                                                                                                                                                                                    | Type                          |
@@ -405,6 +432,7 @@ Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/
 
 Withdraws the full commission of a validator to the validator creator (initial delegator) address.
 
+<!-- omit in toc -->
 #### Protofbuf
 
 ```json
@@ -413,11 +441,13 @@ type MsgWithdrawValidatorCommission struct {
 }
 ```
 
+<!-- omit in toc -->
 #### Example
 
 - Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/txs/3739F76EF67A61D6F0163A5B177EA64ED80B67D9AEF8435C525913E69026D320
 - Message Index: `1`
 
+<!-- omit in toc -->
 #### Details
 
 This transaction will trigger an internal transfer from the "Distribution" module account to the withdraw to address. Note that the "Distribution" module account is an internal account in Crypto.org Chain to hold the rewards, commissions and community pool funds before they are being distributed.
@@ -440,6 +470,7 @@ Fund from an account to the community pool. The community pool can later be sent
 
 - Funds movement: Yes
 
+<!-- omit in toc -->
 #### Protobuf
 
 ```go
@@ -449,10 +480,12 @@ type MsgFundCommunityPool struct {
 }
 ```
 
+<!-- omit in toc -->
 #### Example
 
 https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/txs/7C1747E0189DCA88BBA55A1720809C8DF6075799C11ECBE4C4E1F89C91D4F55F
 
+<!-- omit in toc -->
 #### Details
 
 This transaction will initiate a transfer from an account to the "Distribution" module account. Note that the "Distribution" module account is an internal account in Crypto.org Chain to hold the rewards, commissions and community pool funds before they are being distributed.
@@ -478,6 +511,7 @@ Create a new validator
 
 Funds movement: Yes
 
+<!-- omit in toc -->
 #### Protobuf
 
 ```go
@@ -514,10 +548,12 @@ type CommissionRates struct {
 }
 ```
 
+<!-- omit in toc -->
 #### Example
 
 Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/txs/7B3C19A3674C9EF856C43FFF50B021085AC4DA693AA47F82882FFAC78F21DE05
 
+<!-- omit in toc -->
 #### Details
 
 | Detail | Accessor | Type |
@@ -536,6 +572,7 @@ Edit and existing validator
 
 Funds Movement: No
 
+<!-- omit in toc -->
 #### Protobuf
 
 ```go
@@ -564,11 +601,13 @@ type Description struct {
 }
 ```
 
+<!-- omit in toc -->
 #### Example
 
 Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/txs/F4A1D7757AD20979D540C0CD29DD335D17E121F15AA447990B87E0EE94531BD7
 
-#### Details
+<!-- omit in toc -->
+### Details
 
 TODO
 
@@ -583,6 +622,7 @@ Perform a delegation of coins from a delegator to a validator
 
 Funds movement: Yes
 
+<!-- omit in toc -->
 #### Protobuf
 
 ```go
@@ -593,10 +633,12 @@ type MsgDelegate struct {
 }
 ```
 
+<!-- omit in toc -->
 #### Example
 
 Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/txs/CCB45B0C6EC18A327ADFC8C36478A163D8C2A8BD9EB13687F73ED3D4559318A3
 
+<!-- omit in toc -->
 #### Details
 
 | Detail | Accessor | Type |
@@ -620,6 +662,7 @@ There is a side effect of `MsgBeginRedelegate`, upon successful execution of thi
 
 Funds movement: Yes
 
+<!-- omit in toc -->
 #### Protobuf
 
 ```go
@@ -631,11 +674,14 @@ type MsgBeginRedelegate struct {
 }
 ```
 
+<!-- omit in toc -->
 #### Example
 
 Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/txs/5D43A55463C8FB30A89306C26C5E3318826AD075D36E9B5E72F7019C00F14549
 
+<!-- omit in toc -->
 #### Details
+<!-- omit in toc -->
 
 | Detail | Accessor | Type |
 | --- | --- | --- |
@@ -691,6 +737,7 @@ Perform an undelegation from a delegate and a validator.
 
 Funds movement: Yes
 
+<!-- omit in toc -->
 #### Protobuf
 
 ```go
@@ -701,10 +748,12 @@ type MsgUndelegate struct {
 }
 ```
 
+<!-- omit in toc -->
 #### Example
 
 Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/txs/3B36AA1AC81ACD58E7A06C21353DB0FC40A70EDBF6BD2CD23D7BEDC7A0F56318
 
+<!-- omit in toc -->
 #### Details
 
 | Detail | Accessor | Type |
@@ -731,6 +780,7 @@ Unjail a validator
 
 Funds movement: No
 
+<!-- omit in toc -->
 #### Protobuf
 
 ```go
@@ -739,12 +789,146 @@ type MsgUnjail struct {
 }
 ```
 
+<!-- omit in toc -->
 #### Example
 
 Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/txs/58BF8EBD17FF9500F395E4A9B2AE93EF21306E5706B3EC31CE116654D78B8684
 
+<!-- omit in toc -->
 #### Details
 
 TODO
+
+### 2. Being Jailed and Slashed
+
+A validator can get jailed for two reason:
+1. Liveness
+2. Double sign
+
+#### Liveness
+
+Liveness issue occurs when the validator failed to sign 50%* of the blocks in a 5000# blocks sliding window.
+
+Upon a validator committing liveness issue, the validator is jailed for 24 hours (85400 seconds#).
+
+\# The liveness metrics and the penalty is subject to the network parameters to be explained in the [details section](#jailed-and-slashed-details-params)
+
+#### Double Sign
+
+Double sign occurs when a validator attempt to provide multiple signatures of the same block height.
+
+This is considered as a serious fault and upon committing the validator will got jailed forever and got slashed for 5% of the total staking#.
+
+This slashing is applied to all the delegations (both self delegation and delegation from other accounts).
+
+\# The slashing rate is subject to the network parameters to be explained in the [details section](#jailed-and-slashed-details-params)
+
+<a id="jailed-and-slashed-limitations">
+
+#### Limitations
+
+There is a limitation in the protocol that the slashing amount cannot be easily extracted right now. Theoretically one could calculate the slashed amount of each delegator by applying the slash rate and delegation proportion but in practice small precision issue may be introduced in the calculation process and introduce discrepancy with the chain, so it is not recommended to do so.
+
+On the other hand, the slashed amount, similar to the block rewards and commission, are **not** deducted from delegator account directly. There are events to signal the jail and slashing occurs but it serve more of the purpose of describing such as event occurs only.
+
+<a id="jailed-and-slashed-details-params">
+
+<!-- omit in toc -->
+#### Details - Params
+
+Cosmos Slashing Params API: https://mainnet.crypto.org:1317/cosmos/slashing/v1beta1/params
+
+| Detail | Category | Accessor | Type |
+| --- | --- | --- | --- |
+| Signing window size (in Blocks) | Liveness | `.params.signed_blocks_window` | String |
+| Minimum # of blocks to sign in the window |  Liveness | `.params.min_signed_per_window` | String |
+| How long to jail | Liveness | `.params.downtime_jail_duration` | String (Duration) |
+| Slashing ratio | Liveness | `.params.slash_fraction_downtime` | String |
+| Slashing ratio | Double Sign | `.params.slash_fraction_double_sign` | String |
+
+<a id="jailed-and-slashed-details-events">
+
+<!-- omit in toc -->
+#### Details - Jail and Slash events
+
+Tendermint Block Results API: https://mainnet.crypto.org:26657/block?height=[height]
+
+You can use the [Cosmos API tools](#cosmos-api-tools) to decode the event details for readability during integration.
+
+| Detail | Category | Accessor | Type |
+| --- | --- | --- | --- |
+| Jail | Liveness, Double Sign | `.results.begin_block_events[event_index].type === "slash" && Base64Decode(.results.begin_block_events[event_index].attributes[attribute_index].key) === "jailed"` | Assertion |
+| Jailed Reason | Liveness | `Base64Decode(.results.begin_block_events[event_index].attributes[attribute_index].value === "missing_signature"`<br />where<br />`.results.begin_block_events[event_index].type === "slash" && Base64Decode(.results.begin_block_events[event_index].attributes[attribute_index].key) === "reason"` | String |
+| Jailed Reason | Double Sign | `Base64Decode(.results.begin_block_events[event_index].attributes[attribute_index].value === "double_sign"`<br />where<br />`.results.begin_block_events[event_index].type === "slash" && Base64Decode(.results.begin_block_events[event_index].attributes[attribute_index].key) === "reason"` | String |
+| Jailed Validator Address | Liveness, Double Sign | `Base64Decode(.results.begin_block_events[event_index].attributes[attribute_index].value)`<br />where<br />`.results.begin_block_events[event_index].type === "slash" && Base64Decode(.results.begin_block_events[event_index].attributes[attribute_index].key) === "jailed"` | String |
+| Slashed Validator Address | Liveness, Double Sign | `Base64Decode(.results.begin_block_events[event_index].attributes[attribute_index].value)`<br />where<br />`.results.begin_block_events[event_index].type === "slash" && Base64Decode(.results.begin_block_events[event_index].attributes[attribute_index].key) === "address"` | String |
+
+Liveness Example: https://mainnet.crypto.org:26657/block_results?height=210356
+
+Liveness Event Example
+```json
+{
+	"type": "slash",
+	"attributes": [
+		{
+			"key": "address",
+			"value": "crocnclcons1hv2qumdxjeekgtmmnjvzx7ukv7uhlh29w8a4tx",
+			"index": true
+		},
+		{
+			"key": "power",
+			"value": "4284179",
+			"index": true
+		},
+		{
+			"key": "reason",
+			"value": "missing_signature",
+			"index": true
+		},
+		{
+			"key": "jailed",
+			"value": "crocnclcons1hv2qumdxjeekgtmmnjvzx7ukv7uhlh29w8a4tx",
+			"index": true
+		}
+	]
+}
+```
+
+Double Sign Example: https://mainnet.crypto.org:26657/block_results?height=210356
+
+Double Sign Event Example
+```json
+{
+	"type": "slash",
+	"attributes": [
+		{
+			"key": "address",
+			"value": "crocnclcons1kf8994z2h49u7ldh6e96mlhw6wjqx4lr4929sc",
+			"index": true
+		},
+		{
+			"key": "power",
+			"value": "6524600",
+			"index": true
+		},
+		{
+			"key": "reason",
+			"value": "double_sign",
+			"index": true
+		}
+	]
+},
+{
+	"type": "slash",
+	"attributes": [
+		{
+			"key": "jailed",
+			"value": "crocnclcons1kf8994z2h49u7ldh6e96mlhw6wjqx4lr4929sc",
+			"index": true
+		}
+	]
+}
+```
+
 
 [Top](#table-of-content)
