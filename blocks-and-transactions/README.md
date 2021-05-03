@@ -53,8 +53,8 @@ This document describes the block and transaction structure of Crypto.org Chain 
 		- [1b. Community Pool Spend Proposal](#1b-community-pool-spend-proposal)
 		- [2. MsgDeposit](#2-msgdeposit)
 		- [2a. Burn Proposal's Deposit if Proposal does not Get Enough Deposit](#2a-burn-proposals-deposit-if-proposal-does-not-get-enough-deposit)
-		- [2b. Return Proposal's Depsoit](#2b-return-proposals-depsoit)
-		- [2c. Burn Proposal's Depsoit](#2c-burn-proposals-depsoit)
+		- [2b. Return Proposal's Deposit](#2b-return-proposals-deposit)
+		- [2c. Burn Proposal's Deposit](#2c-burn-proposals-deposit)
 		- [3. MsgVote](#3-msgvote)
 		- [4. Proposal Result](#4-proposal-result)
 	- [Appendix: Module Accounts on Mainnet](#appendix-module-accounts-on-mainnet)
@@ -1403,7 +1403,7 @@ https://mainnet.crypto.org:26657/block_results?height=195346
 | Proposal Id | `Base64Decode(.result.end_block_events[event_index].attributes[attribute_index].value) === "{gov module account}"` <br />where <br />`.result.end_block_events[event_index].type === "inactive_proposal" && .result.Base64Decode(end_block_events[event_index].attributes[attribute_index].key) === "proposal_id"`. | String |
 | Assert Proposal is Dropped | `Base64Decode(.result.end_block_events[event_index].attributes[attribute_index].value === "proposal_dropped")` <br />where <br />`.result.end_block_events[event_index].type === "inactive_proposal" && Base64Decode(.result.end_block_events[event_index].attributes[attribute_index].key === "proposal_result"`). | String |
 
-### 2b. Return Proposal's Depsoit
+### 2b. Return Proposal's Deposit
 
 There are a few cases where a proposal deposits will be returned to the depositors. For details, plesae refer to [Proposal Result](#4-proposal-result).
 
@@ -1473,7 +1473,7 @@ Note that there may be multiple depositors of a proposal, so the event may appea
 
 [Top](#table-of-content)
 
-### 2c. Burn Proposal's Depsoit
+### 2c. Burn Proposal's Deposit
 
 There are a few cases where a proposal deposits will be burnt. For details, plesae refer to [Proposal Result](#4-proposal-result) for more details.
 
