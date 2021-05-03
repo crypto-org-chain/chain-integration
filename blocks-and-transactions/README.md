@@ -56,7 +56,7 @@ This document describes the block and transaction structure of Crypto.org Chain 
 		- [2. MsgDeposit](#2-msgdeposit)
 		- [2a. Deposit if Proposal does not Get into Voting Period](#2a-deposit-if-proposal-does-not-get-into-voting-period)
 		- [2b. Proposal if Proposal Veto Vote Exceed Veto Threshold](#2b-proposal-if-proposal-veto-vote-exceed-veto-threshold)
-		- [2c. Proposal if Proposal is Complets Voting Period](#2c-proposal-if-proposal-is-complets-voting-period)
+		- [2c. Proposal if Proposal Completed Voting Period](#2c-proposal-if-proposal-is-complets-voting-period)
 		- [3. MsgVote](#3-msgvote)
 	- [Appendix: Module Accounts on Mainnet](#appendix-module-accounts-on-mainnet)
 ## Changelog
