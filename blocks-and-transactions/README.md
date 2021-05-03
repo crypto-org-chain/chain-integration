@@ -3,7 +3,7 @@
 This document describes the block and transaction structure of Crypto.org Chain and explain different ways to extract and parse the details of them.
 
 - Based on Crypto.org Chain [v1.2.1](https://github.com/crypto-org-chain/chain-main/releases/tag/v1.2.1) release. 
-- Last updated at: 2021-05-02
+- Last updated at: 2021-05-03
 
 ## Table of Content
 - [Crypto.org Chain Blocks and Transactions](#cryptoorg-chain-blocks-and-transactions)
@@ -51,13 +51,12 @@ This document describes the block and transaction structure of Crypto.org Chain 
 	- [Governance](#governance)
 		- [1. MsgSubmitProposal](#1-msgsubmitproposal)
 		- [1b. Community Pool Spend Proposal](#1b-community-pool-spend-proposal)
-			- [Community Pool Spend Proposal Transaction](#community-pool-spend-proposal-transaction)
-			- [Community Pool Spend Proposal Funds Release](#community-pool-spend-proposal-funds-release)
 		- [2. MsgDeposit](#2-msgdeposit)
-		- [2a. Deposit if Proposal does not Get into Voting Period](#2a-deposit-if-proposal-does-not-get-into-voting-period)
-		- [2b. Proposal if Proposal Veto Vote Exceed Veto Threshold](#2b-proposal-if-proposal-veto-vote-exceed-veto-threshold)
-		- [2c. Proposal if Proposal is Complets Voting Period](#2c-proposal-if-proposal-is-complets-voting-period)
+		- [2a. Burn Proposal's Deposit if Proposal does not Get Enough Deposit](#2a-burn-proposals-deposit-if-proposal-does-not-get-enough-deposit)
+		- [2b. Return Proposal's Depsoit](#2b-return-proposals-depsoit)
+		- [2c. Burn Proposal's Depsoit](#2c-burn-proposals-depsoit)
 		- [3. MsgVote](#3-msgvote)
+		- [4. Proposal Result](#4-proposal-result)
 	- [Appendix: Module Accounts on Mainnet](#appendix-module-accounts-on-mainnet)
 ## Changelog
 
@@ -69,6 +68,7 @@ This document describes the block and transaction structure of Crypto.org Chain 
 - 2021-05-02 Add undelegate completion details
 - 2021-05-02 Add module accounts appendix
 - 2021-05-02 Add governance module
+- 2021-05-03 Update proposal deposit return and burn mechanism
 
 ## Common APIs
 
@@ -1012,6 +1012,7 @@ One sub-type of proposal is to spend community pool. The community has to pre-fu
 
 After a proposal of this kind got passed, it will release the funds to the grants receipient account.
 
+<!-- omit in toc -->
 #### Community Pool Spend Proposal Transaction
 
 | Detail | Accessor | Type |
@@ -1243,14 +1244,15 @@ Example of Community Pool Spend Proposal tranaction:
 }
 ```
 
-#### Community Pool Spend Proposal Funds Release
+<!-- omit in toc -->
+#### Community Pool Spend Proposal Funds Movement
 
 | Detail | Accessor | Type |
 | --- | --- | --- |
-| Proposal Passed | `.result.end_block_events[event_index].attributes[attribute_index].value === "proposal_passed"` <br />where <br />`.result.end_block_events[event_index].type === "active_proposal" && .result.end_block_events[event_index].attributes[attribute_index].key === "proposal_result"`. | String |
-| Grant from "distribution" Module Account | `.result.end_block_events[event_index].attributes[attribute_index].value === "{distribution module account}"` <br />where <br />`.result.end_block_events[event_index].type === "transfer" && .result.end_block_events[event_index].attributes[attribute_index].key === "sender"`. | String |
-| Recipient Account | `.result.end_block_events[event_index].attributes[attribute_index].value` <br />where <br />`.result.end_block_events[event_index].type === "transfer" && .result.end_block_events[event_index].attributes[attribute_index].key === "recipient"`. | String |
-| Grants Amount | `.result.end_block_events[event_index].attributes[attribute_index].value` <br />where <br />`.result.end_block_events[event_index].type === "transfer" && .result.end_block_events[event_index].attributes[attribute_index].key === "amount"`. | [Asset String](#asset-string) |
+| Proposal Passed | `Base64Decode(.result.end_block_events[event_index].attributes[attribute_index].value) === "proposal_passed"` <br />where <br />`.result.end_block_events[event_index].type === "active_proposal" && Base64Decode(.result.end_block_events[event_index].attributes[attribute_index].key) === "proposal_result"`. | String |
+| Grant from "distribution" Module Account | `Base64Decode(.result.end_block_events[event_index].attributes[attribute_index].value) === "{distribution module account}"` <br />where <br />`.result.end_block_events[event_index].type === "transfer" && Base64Decode(.result.end_block_events[event_index].attributes[attribute_index].key) === "sender"`. | String |
+| Recipient Account | `Base64Decode(.result.end_block_events[event_index].attributes[attribute_index].value)` <br />where <br />`.result.end_block_events[event_index].type === "transfer" && Base64Decode(.result.end_block_events[event_index].attributes[attribute_index].key === "recipient")`. | String |
+| Grants Amount | `Base64Decode(.result.end_block_events[event_index].attributes[attribute_index].value)` <br />where <br />`.result.end_block_events[event_index].type === "transfer" && Base64Decode(.result.end_block_events[event_index].attributes[attribute_index].key === "amount")`. | [Asset String](#asset-string) |
 
 Example of Block Results API when Community Pool Spend Proposal Funds is Released:
 ```json
@@ -1381,13 +1383,29 @@ Cosmos Transaction Query API: https://mainnet.crypto.org:1317/cosmos/tx/v1beta1/
 
 [Top](#table-of-content)
 
-### 2a. Deposit if Proposal does not Get into Voting Period
+### 2a. Burn Proposal's Deposit if Proposal does not Get Enough Deposit
 
-### 2b. Proposal if Proposal Veto Vote Exceed Veto Threshold
+If a proposal does not meet the depsoit requirement after the deposit period, the deposit will **NOT** be returned to the depositors. Those deposits **will be burnt** from the "gov" module account as well.
 
-### 2c. Proposal if Proposal is Complets Voting Period
+The latest deposit requirement ("min_deposit") and deposit period ("max_deposit_period") can be checked on https://mainnet.crypto.org:1317/cosmos/gov/v1beta1/params/deposit. Note that they are network parameters and may change over time after governance proposals.
 
-When a proposal is completes voting period, and the number of "No with Veto" votes do not exceed the veto threshold, the deposit are all returned to the proposal depositors.
+To monitor a proposal becomes inacitve, it can be detected by monitoring the `end_block_events` in Tendermint Block Results API. However, for the amount of deposit burnt, you have to keep track of the deposits made to the proposal before. Note that this operation does not involve any user account as the deposits are burnt.
+
+<!-- omit in toc -->
+Tendermint Block Results API:
+https://mainnet.crypto.org:26657/block_results?height=195346
+
+<!-- omit in toc -->
+#### Details
+
+| Detail | Accessor | Type |
+| --- | --- | --- |
+| Proposal Id | `Base64Decode(.result.end_block_events[event_index].attributes[attribute_index].value) === "{gov module account}"` <br />where <br />`.result.end_block_events[event_index].type === "inactive_proposal" && .result.Base64Decode(end_block_events[event_index].attributes[attribute_index].key) === "proposal_id"`. | String |
+| Assert Proposal is Dropped | `Base64Decode(.result.end_block_events[event_index].attributes[attribute_index].value === "proposal_dropped")` <br />where <br />`.result.end_block_events[event_index].type === "inactive_proposal" && Base64Decode(.result.end_block_events[event_index].attributes[attribute_index].key === "proposal_result"`). | String |
+
+### 2b. Return Proposal's Depsoit
+
+There are a few cases where a proposal deposits will be returned to the depositors. For details, plesae refer to [Proposal Result](#4-proposal-result).
 
 The return deposit can be detected from monitoring the `end_block_events` in Tendermint Block Results API.
 
@@ -1402,9 +1420,9 @@ https://mainnet.crypto.org:26657/block_results?height=496620
 
 | Detail | Accessor | Type |
 | --- | --- | --- |
-| Return From "gov" Module Account | `.result.end_block_events[event_index].attributes[attribute_index].value === "{gov module account}"` <br />where <br />`.result.end_block_events[event_index].type === "transfer" && .result.end_block_events[event_index].attributes[attribute_index].key === "sender"`. | String |
-| Return To Address | `.result.end_block_events[event_index].attributes[attribute_index].value` <br />where <br />`.result.end_block_events[event_index].type === "transfer" && .result.end_block_events[event_index].attributes[attribute_index].key === "recipient"`. | String |
-| Returned Deposit Amount | `.result.end_block_events[event_index].attributes[attribute_index].value` <br />where <br />`.result.end_block_events[event_index].type === "transfer" && .result.end_block_events[event_index].attributes[attribute_index].key === "amount"`. | [Asset String](#asset-string) |
+| Return From "gov" Module Account | `Base64Decode(.result.end_block_events[event_index].attributes[attribute_index].value) === "{gov module account}"` <br />where <br />`.result.end_block_events[event_index].type === "transfer" && Base64Decode(.result.end_block_events[event_index].attributes[attribute_index].key) === "sender"`. | String |
+| Return To Address | `Base64Decode(.result.end_block_events[event_index].attributes[attribute_index].value)` <br />where <br />`.result.end_block_events[event_index].type === "transfer" && Base64Decode(.result.end_block_events[event_index].attributes[attribute_index].key) === "recipient"`. | String |
+| Returned Deposit Amount | `Base64Decode(.result.end_block_events[event_index].attributes[attribute_index].value)` <br />where <br />`.result.end_block_events[event_index].type === "transfer" && Base64Decode(.result.end_block_events[event_index].attributes[attribute_index].key === "amount"`). | [Asset String](#asset-string) |
 
 Note that there may be multiple depositors of a proposal, so the event may appears multiple times.
 
@@ -1453,9 +1471,83 @@ Note that there may be multiple depositors of a proposal, so the event may appea
 ]
 ```
 
+[Top](#table-of-content)
+
+### 2c. Burn Proposal's Depsoit
+
+There are a few cases where a proposal deposits will be burnt. For details, plesae refer to [Proposal Result](#4-proposal-result) for more details.
+
+If a proposal does not get enought votes that exceed the "quorum" or has the "No with Veto" votes exceed the "veto_threshold", the deposit will **NOT** be returned to the depositors. Those deposits **will be burnt** from the "gov" module account as well.
+
+To monitor a proposal got rejected and deposits got burned, it can be detected by monitoring the `end_block_events` in Tendermint Block Results API. There will be an "proposal_result" event marking the proposal as rejected, and different from [Return Proposal's Deposit](#2b-return-proposals-depsoit), there will be **NO** transfer event in the `end_block_results`, which means the deposits is **NOT** returned and is burnt.
+
+However, for the amount of deposit burnt, you have to keep track of the deposits made to the proposal before. Note that this operation does not involve any user account as the deposits are burnt.
+
+<!-- omit in toc -->
+#### Details and Example
+
+| Detail | Accessor | Type |
+| --- | --- | --- |
+| Proposal Id | `Base64Decode(.result.end_block_events[event_index].attributes[attribute_index].value) === "{gov module account}"` <br />where <br />`.result.end_block_events[event_index].type === "active_proposal" && .result.Base64Decode(end_block_events[event_index].attributes[attribute_index].key) === "proposal_id"`. | String |
+| Assert Proposal is Rejected | `Base64Decode(.result.end_block_events[event_index].attributes[attribute_index].value === "proposal_rejected")` <br />where <br />`.result.end_block_events[event_index].type === "active_proposal" && Base64Decode(.result.end_block_events[event_index].attributes[attribute_index].key === "proposal_result"`). | String |
+
+Tendermint Block Results API JSON Example (Base64 Decoded):
+```json
+{
+  "jsonrpc": "2.0",
+  "id": -1,
+  "result": {
+    "height": "285",
+    "txs_results": null,
+    "begin_block_events": [
+      ...
+    ],
+    "end_block_events": [
+      {
+        "type": "active_proposal",
+        "attributes": [
+          {
+            "key": "proposal_id",
+            "value": "3",
+            "index": true
+          },
+          {
+            "key": "proposal_result",
+            "value": "proposal_rejected",
+            "index": true
+          }
+        ]
+      }
+    ],
+    "validator_updates": null,
+    "consensus_param_updates": {
+      ...
+    }
+  }
+}
+```
+
+[Top](#table-of-content)
+
 ### 3. MsgVote
 
 TODO
+
+
+### 4. Proposal Result
+
+Latest tally params can be retreived from: 
+https://mainnet.crypto.org:1317/cosmos/gov/v1beta1/params/tallying. The params may change from time to time after governance proposal.
+
+| Scenario | Result | Burn Deposit |
+| --- | --- | --- |
+| All voter has no staked coins | Rejects | No |
+| Not enough `tally_params.quorum` of votes | Rejects | **Yes** |
+| No one votes (Everyone abstain) | Rejects | No |
+| More than `tally_params.veto_threshold` voter veto | Rejects | **Yes** | 
+| More than `tally_params.threshold` non-abstaining votes No | Rejects | No |
+| More than `tally_params.threshold` non-abstaining votes Yes | Passes | No |
+| More than `tally_params.threshold` non-abstaining votes Yes but the proposal cannot be executed (e.g. Insufficient funds in community pool to spend) | Failed | No |
 
 
 [Top](#table-of-content)
